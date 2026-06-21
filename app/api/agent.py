@@ -12,9 +12,11 @@ router = APIRouter(
 
 @router.get("/chat")
 def chat(
+    session_id:str,
     question: str
 ):
 
     return AgentService.run(
+        session_id,
         question
     )

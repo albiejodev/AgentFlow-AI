@@ -1,24 +1,26 @@
 import chromadb
 
 
-client = chromadb.PersistentClient(
-    path="chroma_data"
-)
+class ChromaDB:
 
+    client = chromadb.PersistentClient(
+        path="chroma_data"
+    )
 
-collection = client.get_or_create_collection(
-    name="documents"
-)
+    collection = client.get_or_create_collection(
+        name="documents"
+    )
 
-
-class chromaDB:
-
-
-    @staticmethod
+    @classmethod
     def search(
-        query: str
+        cls,
+        query: str,
+        top_k: int = 3
     ):
-        return collection.query(
+
+        results = cls.collection.query(
             query_texts=[query],
-            n_results=3
+            n_results=top_k
         )
+
+        return results

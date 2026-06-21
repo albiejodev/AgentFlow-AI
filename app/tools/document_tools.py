@@ -1,9 +1,14 @@
 from app.db.chroma_db import (
-    chromaDB
+    ChromaDB
 )
 
 def search_documents(
     query: str
 ):
 
-    return ChromaDB.search(query)
+    results = ChromaDB.search(query)
+
+    print(results)
+
+    return results
+    

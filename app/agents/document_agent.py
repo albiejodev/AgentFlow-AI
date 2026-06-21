@@ -4,11 +4,13 @@ from app.services.llm_service import (
     LLMService
 )
 import logging
+from app.tools.calculator_tool import calculate
 from app.tools.time_tools import (get_current_time)
 from app.tools.document_tools import (search_documents)
 from app.services.llm_service import (
     LLMService
 )
+from app.services.memory_service import (MemoryService)
 
 logger  = logging.getLogger(__name__)
 
@@ -20,6 +22,8 @@ class AgentState(TypedDict):
         answer : str
         route : str
         tool_result : any
+        session_id:str
+        history:str
 
 
 
@@ -46,24 +50,42 @@ def answer_node(
     state: AgentState
 ):
 
-    tool_result = state["tool_result"]
+    tool_result = state.get.get("tool_result")
 
-    if isinstance(tool_result, str):
+    if not tool_result:
+        context = ""
+
+    elif isinstance(tool_result, str):
 
         context = tool_result
 
     else:
 
+        documents = (
+            tool_result["documents"][0]
+        )
+
+        print("documents retrieved",len(documents))
+
         context = "\n".join(
-            item["text"]
-            for item in tool_result
+            documents
         )
 
     prompt = f"""
     You are a helpful AI assistant.
 
-    Answer the user's question
-    using only the provided context.
+    Use the conversation history
+    and document context when available.
+
+    If the answer exists in the conversation history, use it.
+
+    If the answer exists in the document context, use it.
+
+    If neither contains the answer,say you donot know.
+
+    Conversation History:
+
+    {state["history"]}
 
     Context:
 
@@ -80,6 +102,18 @@ def answer_node(
 
     state["answer"] = answer
 
+    MemoryService.add_message(
+    state["session_id"],
+    "user",
+    state["question"]
+    )
+
+    MemoryService.add_message(
+        state["session_id"],
+        "assistant",
+        answer
+    )
+
     return state
 
 
@@ -90,18 +124,36 @@ def router_node(
     state: AgentState
 ):
 
-    question = (
-        state["question"]
+    question = state["question"]
+
+    prompt = f"""
+    You are a routing agent.
+
+    Decide which route to use.
+
+    Available routes:
+
+    time
+    document
+    calculator
+    direct
+
+    Return ONLY one word.
+
+    Question:
+
+    {question}
+    """
+
+    route = (
+        LLMService.generate(
+            prompt
+        )
+        .strip()
         .lower()
     )
 
-    if "time" in question:
-
-        state["route"] = "time"
-
-    else:
-
-        state["route"] = "document"
+    state["route"] = route
 
     return state
 
@@ -137,10 +189,37 @@ def tool_node(
         state["tool_result"] = (
             search_documents(question)
         )
-
+    elif route == "calculator":
+        state["tool_result"]=(
+            calculate(question)
+        )
     return state
 
 
+
+
+def memory_node(
+    state: AgentState
+):
+
+    history = MemoryService.get_history(
+        state["session_id"]
+    )
+
+    history_text = ""
+
+    for message in history:
+
+        history_text += (
+            f"{message['role']}: "
+            f"{message['content']}\n"
+        )
+
+    state["history"] = (
+        history_text
+    )
+
+    return state
 
 
 
@@ -163,12 +242,18 @@ graph_builder.add_node(
     answer_node
 )
 
+graph_builder.add_node(
+    "memory",
+     memory_node
+)
+
 graph_builder.add_conditional_edges(
     "router",
     route_decision,
     {
         "time": "tool",
-        "document": "tool"
+        "document": "tool",
+        "direct":"answer"
     }
 )
 
@@ -177,8 +262,13 @@ graph_builder.add_edge(
     "answer"
 )
 
-graph_builder.set_entry_point(
+graph_builder.add_edge(
+    "memory",
     "router"
+)
+
+graph_builder.set_entry_point(
+    "memory"
 )
 
 agent = graph_builder.compile()
