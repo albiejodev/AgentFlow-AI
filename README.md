@@ -1,83 +1,176 @@
 # AgentFlow-AI
 
-A LangGraph-powered AI Agent built with FastAPI, ChromaDB, Memory Management, Tool Calling, and LLM Routing.
+AgentFlow-AI is a production-oriented AI workflow engine built to explore the core patterns behind modern AI agents, customer support systems, AI copilots, workflow automation platforms, and AI voice assistants.
 
-AgentFlow-AI demonstrates the core building blocks used in modern AI assistants, AI copilots, AI customer support agents, and AI voice receptionists.
+The project combines LangGraph, FastAPI, ChromaDB, session memory, tool calling, and LLM-based routing to create a modular agent capable of reasoning, retrieving information, selecting tools, and maintaining conversational context across sessions.
+
+As AI systems become increasingly capable, I wanted to move beyond simply consuming AI tools and learn how they are actually built. AgentFlow-AI was created as a hands-on exploration of agentic workflows, memory systems, retrieval pipelines, tool orchestration, and production AI architecture.
 
 ---
 
-## Features
+# Problem Statement
 
-### LangGraph Workflow
+Traditional applications follow deterministic workflows:
 
-* State-based agent architecture
-* Node and edge orchestration
-* Conditional routing
-* Multi-step agent execution
+```text
+Input → Business Logic → Output
+```
 
-### LLM Integration
+Modern AI systems require a different architecture:
 
-* Gemini support
-* OpenAI support
-* Configurable provider via environment variables
+```text
+Input → Memory → Reasoning → Tool Selection → Retrieval → Response
+```
 
-### Memory
+AgentFlow-AI was built to understand and implement these building blocks in a structured, maintainable, and extensible way.
 
-* Session-based conversation memory
-* Chat history persistence
-* Context-aware responses
+The goal is to simulate how production AI systems operate while keeping the architecture simple enough to experiment with and extend.
 
-### Retrieval Augmented Generation (RAG)
+---
 
-* ChromaDB vector database
-* Semantic document retrieval
-* Context injection into LLM prompts
+# Key Features
 
-### Tool Calling
+## LangGraph Workflow
 
-* Document Search Tool
-* Time Tool
-* Extensible tool architecture
+- State-based agent architecture
+- Node and edge orchestration
+- Conditional routing
+- Multi-step agent execution
 
-### Intelligent Routing
+## LLM Integration
 
-* LLM-powered route selection
-* Dynamic tool choice
-* Direct answer support
+- OpenAI support
+- Google Gemini support
+- Configurable provider switching
 
-### API First
+## Memory
 
-* FastAPI backend
-* REST endpoints
-* Swagger documentation
+- Session-based conversation memory
+- Context-aware responses
+- Chat history persistence
+
+## Retrieval Augmented Generation (RAG)
+
+- ChromaDB vector database
+- Semantic document retrieval
+- Context injection into prompts
+
+## Tool Calling
+
+- Document Search Tool
+- Time Tool
+- Extensible tool architecture
+
+## Intelligent Routing
+
+- LLM-powered route selection
+- Dynamic tool invocation
+- Direct-answer support
+
+## API First
+
+- FastAPI backend
+- REST endpoints
+- Swagger documentation
 
 ---
 
 # Architecture
 
 ```text
-User Question
-      │
-      ▼
- Memory Node
-      │
-      ▼
- LLM Router
-      │
-      ├─────────────┬──────────────┐
-      ▼             ▼              ▼
- Time Tool    Document Tool    Direct Answer
-      │             │
-      └──────┬──────┘
-             ▼
-        Answer Node
-             │
-             ▼
-      Save Memory
-             │
-             ▼
-          Response
+                        ┌─────────────────┐
+                        │     Client      │
+                        │ Web / Postman   │
+                        └────────┬────────┘
+                                 │
+                                 ▼
+                        ┌─────────────────┐
+                        │     FastAPI     │
+                        │  REST Endpoint  │
+                        └────────┬────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────┐
+                    │    LangGraph Engine     │
+                    └────────────┬────────────┘
+                                 │
+          ┌──────────────────────┼──────────────────────┐
+          │                      │                      │
+          ▼                      ▼                      ▼
+
+ ┌────────────────┐   ┌────────────────┐   ┌────────────────┐
+ │  Memory Node   │   │  Router Node   │   │  State Store   │
+ │ Session Recall │   │ Intent Detect  │   │ AgentState     │
+ └────────┬───────┘   └────────┬───────┘   └────────────────┘
+          │                    │
+          │                    ▼
+          │          ┌────────────────────┐
+          │          │   Tool Selection   │
+          │          └─────────┬──────────┘
+          │                    │
+          ▼                    ▼
+
+ ┌────────────────┐   ┌────────────────┐
+ │ Document Tool  │   │   Time Tool    │
+ │   ChromaDB     │   │ System Utility │
+ └────────┬───────┘   └────────┬───────┘
+          │                    │
+          └──────────┬─────────┘
+                     ▼
+
+            ┌──────────────────┐
+            │   Answer Node    │
+            │  LLM Generation  │
+            └────────┬─────────┘
+                     │
+                     ▼
+
+            ┌──────────────────┐
+            │ Memory Update    │
+            └────────┬─────────┘
+                     │
+                     ▼
+
+            ┌──────────────────┐
+            │ Final Response   │
+            └──────────────────┘
 ```
+
+---
+
+# Design Decisions
+
+## Why LangGraph?
+
+LangGraph provides explicit state management and workflow orchestration, making agent behavior deterministic and easier to debug compared to prompt-only approaches.
+
+## Why FastAPI?
+
+FastAPI offers strong typing, high performance, and straightforward API development, making it ideal for serving AI workloads.
+
+## Why ChromaDB?
+
+ChromaDB provides lightweight semantic retrieval capabilities while keeping local development and experimentation simple.
+
+## Why Session Memory?
+
+Session memory enables conversational continuity while keeping the architecture lightweight. A production deployment would likely use Redis or a dedicated persistence layer.
+
+---
+
+# Challenges & Learnings
+
+## Routing vs Tool Execution
+
+One early design decision was whether routing and tool execution should be combined into a single node. As the workflow evolved, separating these concerns improved maintainability and made the graph easier to extend.
+
+## Memory Management
+
+Passing excessive conversation history increased latency and token consumption. This led to a more selective memory strategy focused on preserving only relevant context.
+
+## Balancing Determinism and LLM Reasoning
+
+Reliable AI systems often require a combination of deterministic workflows and probabilistic LLM reasoning. Finding the right balance was one of the key lessons from building this project.
 
 ---
 
@@ -85,25 +178,25 @@ User Question
 
 ## Backend
 
-* FastAPI
-* Python 3.12
+- FastAPI
+- Python 3.12
 
 ## Agent Framework
 
-* LangGraph
+- LangGraph
 
 ## LLMs
 
-* OpenAI
-* Google Gemini
+- OpenAI
+- Google Gemini
 
 ## Vector Database
 
-* ChromaDB
+- ChromaDB
 
 ## Environment Management
 
-* python-dotenv
+- python-dotenv
 
 ---
 
@@ -114,35 +207,17 @@ AgentFlow-AI
 │
 ├── app
 │   ├── agents
-│   │   └── document_agent.py
-│   │
 │   ├── api
-│   │   └── agent.py
-│   │
 │   ├── db
-│   │   └── chroma_db.py
-│   │
 │   ├── services
-│   │   ├── agent_service.py
-│   │   ├── memory_service.py
-│   │   ├── llm_service.py
-│   │   ├── openai_service.py
-│   │   └── gemini_service.py
-│   │
 │   ├── tools
-│   │   ├── document_tool.py
-│   │   └── time_tool.py
-│   │
 │   ├── config.py
 │   └── main.py
 │
 ├── chroma_data
 ├── scripts
-│   └── load_test_data.py
-│
-├── .env
-├── .env.example
 ├── requirements.txt
+├── .env.example
 └── README.md
 ```
 
@@ -150,45 +225,25 @@ AgentFlow-AI
 
 # Installation
 
-Clone the repository:
-
 ```bash
 git clone https://github.com/your-username/AgentFlow-AI.git
 
 cd AgentFlow-AI
-```
 
-Create virtual environment:
-
-```bash
 python -m venv env
-```
 
-Activate environment:
-
-Windows:
-
-```bash
+# Windows
 env\Scripts\activate
-```
 
-Linux/Mac:
-
-```bash
+# Linux / Mac
 source env/bin/activate
-```
 
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
 
 ---
 
 # Environment Variables
-
-Create a `.env` file:
 
 ```env
 LLM_PROVIDER=gemini
@@ -222,14 +277,6 @@ http://localhost:8000/docs
 
 ---
 
-# Load Sample Documents
-
-```bash
-python -m scripts.load_test_data
-```
-
----
-
 # Example API Calls
 
 ## Ask Agent
@@ -250,13 +297,13 @@ Response:
 
 ## Memory Example
 
-Request 1:
+Request:
 
 ```http
 GET /chat?session_id=albin&question=My name is Albin
 ```
 
-Request 2:
+Follow-up:
 
 ```http
 GET /chat?session_id=albin&question=What is my name?
@@ -272,52 +319,52 @@ Response:
 
 ---
 
-# Supported Routes
+# Current Capabilities
 
-| Route    | Purpose                    |
-| -------- | -------------------------- |
-| time     | Time related queries       |
-| document | Document retrieval queries |
-| direct   | Direct LLM answers         |
+- Conversation Memory
+- LLM Routing
+- Tool Calling
+- RAG Workflows
+- ChromaDB Retrieval
+- Multi-Step Agent Execution
 
 ---
 
 # Future Roadmap
 
-### Completed
+## Completed
 
-* LangGraph Workflow
-* Tool Calling
-* ChromaDB Integration
-* Conversation Memory
-* LLM Routing
-* Multi Tool Support
+- LangGraph Workflow
+- Tool Calling
+- ChromaDB Integration
+- Conversation Memory
+- LLM Routing
 
-### Planned
+## Planned
 
-* Redis Memory Persistence
-* Streaming Responses
-* Web Search Tool
-* Calendar Tool
-* CRM Integration
-* Human Handoff
-* Voice Agent Integration
+- Redis Memory Persistence
+- Streaming Responses
+- Web Search Tool
+- CRM Integration
+- Human Handoff
+- Voice Agent Integration
+- Multi-Agent Workflows
 
 ---
 
 # Learning Outcomes
 
-This project demonstrates:
+This project explores:
 
-* Agentic Workflows
-* Retrieval Augmented Generation (RAG)
-* Tool Calling
-* Vector Databases
-* Session Memory
-* LLM Routing
-* Multi-Step Reasoning
-* FastAPI Development
-* AI System Design
+- Agentic Workflows
+- Retrieval Augmented Generation (RAG)
+- Tool Calling
+- Session Memory
+- LLM Routing
+- Vector Databases
+- Multi-Step Reasoning
+- AI System Design
+- Production AI Architecture
 
 ---
 
